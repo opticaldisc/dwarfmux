@@ -1,0 +1,444 @@
+#!/usr/bin/env python3
+
+import time
+import os
+from subprocess import run
+from subprocess import check_output
+import re
+import argparse
+
+LOGO = """
+ *8888a.                        .d88b                     
+  88 `98;                       88'                  y k u 
+  88  '8b d8    d8 .d8bv8 8vd8b 888P 8vd8vdb, dP  d8  \ /  
+  88  .8P 88 d8 88 8P '88 88'   88   88'88'88 88  88 h X l 
+  88 .d8' 88d88b8P 8b .88 88    88   88 8P 88 88 .88  / \  
+ *888P"   `8P'`8P' `88P^8 8P   d8"   8P    8P `88P^8 b j n 
+                                                       
+      ╔═════════════════════════════════════════════╗
+      ║ A Dwarf Fortress + DFHack terminal wrapper  ║
+      ║             by Optical Disc 💿              ║
+      ╚═════════════════════════════════════════════╝
+"""
+
+# modifier keys
+DFHACK_MODS = ["Shift", "Ctrl", "Alt"]
+TMUX_MODS =   ["S",     "C",    "M"  ]
+
+# files
+DWARFMUX_LOCATION = os.path.realpath(__file__)
+DEFAULT_CONFIG_LOCATION = "/tmp/dwarfmux.conf"
+DEFAULT_DFHACK_LOCATIONS = [\
+	"./", \
+	os.getenv("HOME") + "/.dwarffortress/" \
+]
+
+# To be populated later
+options = []
+
+# find the main dfhack directory, and enter it
+for path in DEFAULT_DFHACK_LOCATIONS:
+	if os.path.isfile(path + "dfhack-run"):
+		os.chdir(path)
+		break
+# if no path is found, exit the program before trying to do anything else
+if not os.path.isfile("./dfhack-run"):
+	print("No DFHack directory found")
+	exit()
+
+CONFIG_HEADER = """
+# WARNING: This is the Dwarfmux temporary tmux config file
+# This file typically isn't meant to be edited by humans
+
+set -sg escape-time 0 
+set -g status-right "#{s/root//:client_key_table}"
+set -g status-left "Dwarfmux"
+set -g status-justify absolute-centre
+
+# DFHack mode
+bind-key -n M-d {
+	set-option key-table DFHACK
+	set-option status-bg colour3
+}
+# DFHack mode with shift key
+bind-key -T DFHACK M-d {
+	set-option key-table DFHACK_SHIFT
+	set-option status-bg colour11
+}
+
+# Escape the current mode
+bind-key -T DFHACK M-Escape {
+	set-option key-table root
+	set-option status-bg colour2
+}
+bind-key -T DFHACK_SHIFT M-Escape {
+	set-option key-table root
+	set-option status-bg colour2
+}
+
+"""
+
+CONFIG_HJKL = """# HJKL movement mode
+bind-key -n M-h {
+	set-option key-table HJKL_MODE
+	set-option status-bg colour12
+}
+bind-key -T DFHACK M-h {
+	set-option key-table HJKL_MODE
+	set-option status-bg colour12
+}
+# Exit HJKL mode
+bind-key -T HJKL_MODE M-Escape {
+	set-option key-table root
+	set-option status-bg colour2
+}
+bind-key -T HJKL_MODE M-d {
+	set-option key-table DFHACK
+	set-option status-bg colour3
+}
+
+"""
+
+MOVEMENT_MODES = ["dwarfmode", "dungeonmode"]
+MOVEMENT_DIRECTIONS = {
+	"north": ["UP",     "N"],
+	"south": ["DOWN",   "S"],
+	"east":  ["RIGHT",  "E"],
+	"west":  ["LEFT",   "W"],
+	"up":    ["UP_Z",   "UP"],
+	"down":  ["DOWN_Z", "DOWN"]
+}
+
+HJKL_CONTROLS = {
+	"h": "west",
+	"j": "south",
+	"k": "north",
+	"l": "east",
+	"y": "northwest",
+	"u": "northeast",
+	"b": "southwest",
+	"n": "southeast"
+}
+
+CONTROL_FIXES = {
+	"KP1":   "southwest",
+	"KP2":   "south",
+	"KP3":   "southeast",
+	"KP4":   "west",
+	"KP6":   "east",
+	"KP7":   "northwest",
+	"KP8":   "north",
+	"KP9":   "northeast",
+	"Up":    "north",
+	"Down":  "south",
+	"Left":  "west",
+	"Right": "east"
+}
+
+
+"""
+Flag processing
+"""
+def get_flags():
+	parser = argparse.ArgumentParser()
+
+	parser.add_argument('-G', '--get-focus-string', \
+		action="store_true", \
+		dest="get_focus_string", \
+		help="Tells you the name of the current view via DFHack.")
+
+	parser.add_argument('-D', '--dfhack-run', \
+		nargs="*", \
+		action="extend", \
+		dest="command_queue", \
+		help="Send a command or group of commands to a running instance of DFHack.")
+
+	parser.add_argument('-I', '--simulate-input', \
+		nargs="*", \
+		action="extend", \
+		dest="input_queue", \
+		help="Send an input action or group of actions to a running instance of DFHack.")
+
+	parser.add_argument('-s', '--simultaneous', \
+		action="store_true", \
+		dest="input_simultaneous", \
+		help="Makes inputs given via -I run all at the same time, rather than delayed in order.")
+
+	parser.add_argument('-M', '--move', \
+		nargs=1, \
+		action="store", \
+		dest="move_direction", \
+		help="Inputs a movement direction depending on what mode the running instance of DFHack is in.")
+
+	parser.add_argument('-f', '--fast', \
+		action="store_true", \
+		dest="move_fast", \
+		help="Makes inputs given via -M move further in Fortress mode.")
+
+	parser.add_argument('-c', '--careful', \
+		action="store_true", \
+		dest="move_careful", \
+		help="Makes inputs given via -M use careful movement in Adventure mode.")
+
+	parser.add_argument('-O', '--options', \
+		nargs="*", \
+		action="extend", \
+		dest="options", \
+		help="List some options for just this instance of Dwarfmux.")
+
+	return parser.parse_args()
+
+
+"""
+Helper functions
+"""
+# return the current view
+def get_focus_string():
+		output = str(check_output(["./dfhack-run", \
+			"lua", \
+			'print( (require "gui").dfhack.gui.getFocusString(dfhack.gui.getCurViewscreen()) )' ] \
+		))
+		# Remove these escape sequences that show up
+		garbage = ["b'", '\\x1b[0m', '\\n', "'"]
+		for trash in garbage:
+			output = output.replace(trash, "")
+
+		return output
+
+# send an array of commands to DFHack
+def dfhack_run(commands: list):
+	# check if we're in the right view
+	if commands[0].startswith("@"):
+		if not commands[0].split("@")[1] in get_focus_string():
+			return
+		commands = commands[1:]
+	# run each command
+	for command in commands:
+		run([ "./dfhack-run", *command.split(" ") ])
+
+# send a list of input signals to DFHack
+def simulate_input(actions: list, simultaneous=False):
+	for action in actions:
+		run(["./dfhack-run", \
+			"lua", \
+			'(require "gui").simulateInput(dfhack.gui.getCurViewscreen(), {["' + action + '"]=true})'] \
+		)
+		if len(actions) > 1 and not simultaneous:
+			time.sleep(0.1)
+
+# send a movement direction to DFHack based on which mode the game is currently in
+def move(move_direction: str, fast=False, careful=False):
+	input_string = ""
+	move_direction = move_direction[0]
+	# Check to see which mode we're in
+	for mode in range(0, len(MOVEMENT_MODES)):
+		# check to see if the current mode is active, otherwise move on
+		if MOVEMENT_MODES[mode] in get_focus_string():
+			for direction in MOVEMENT_DIRECTIONS:
+				if direction in move_direction:
+					input_string = input_string + MOVEMENT_DIRECTIONS[direction][mode]
+
+			# Movements for dwarf mode
+			if MOVEMENT_MODES[mode] == "dwarfmode":
+				input_string = "CURSOR_" + input_string
+				if fast:
+					input_string = input_string + "_FAST"
+			# Movements for adventure mode
+			elif MOVEMENT_MODES[mode] == "dungeonmode":
+				if careful:
+					input_string = "A_CARE_MOVE_" + input_string
+				else:
+					input_string = "A_MOVE_" + input_string
+	# If we're not in any mode, do menu movements
+	if input_string == "":
+		for direction in MOVEMENT_DIRECTIONS:
+			if direction in move_direction:
+				input_string = "STANDARDSCROLL_" + MOVEMENT_DIRECTIONS[direction][0]
+
+	simulate_input([input_string])
+
+
+"""
+get_keybindings() gets all keybindings from dfhack.init and returns them as a nice dictionary
+here's an example entry
+
+"C-A" : [['command'], ['command1', 'command2', 'command3']]
+
+if one entry contains multiple sub-arrays, make sure to provide a way to pick between them
+if a sub-array contains multiple commands, run all of them at once as a group
+"""
+def get_keybindings(init_location: str):
+	# open the specified file and get ready to loop
+	with open(init_location) as init_file:
+
+		# loop through every line
+		keybinding_lines = []
+		for line in init_file:
+			# Collect keybinding lines and trim the fat
+			if line.startswith("keybinding add"):
+				keybinding_lines.append(line.split(" ", 2)[2].strip())
+			# Collect some configuration options from a special comment
+			elif line.startswith("#@dwarfmux"):
+				for option in line.strip().split(" "):
+					options.append(option)
+
+		# loop through the list we just collected and separate commands from keybindings
+		keybinding_command_pairs = []
+		for line in sorted(keybinding_lines):
+			pair = line.split(" ", 1)
+			# *secret third variable that holds the view the keybind is meant to be called in
+			if "@" in pair[0]:
+				pair.append(pair[0].split("@")[1])
+				pair[0] = pair[0].split("@")[0]
+			# loop through all pairs and change DFHack modifier strings to Tmux ones
+			for mod_index in range(0, len(DFHACK_MODS)):
+				pair[0] = pair[0].replace(DFHACK_MODS[mod_index], TMUX_MODS[mod_index])
+			# Make the last letter of the keybinding lowercase
+			pair[0] = pair[0][:-1] + pair[0][-1].lower()
+			# change shift to uppercase letter for the Alt/Meta key
+			if "S-" in pair[0] and not "C-" in pair[0]:
+				pair[0] = pair[0].replace("S-","")
+				pair[0] = pair[0][:-1] + pair[0][-1].upper()
+			# Make the binding uppercase if no modifiers are present
+			# This means bindings that are normally just a key alone are now shift+key
+			if len(pair[0]) == 1:
+				pair[0] = pair[0].upper()
+			# replace multi-command strings (in pair[1]) with lists of commands
+			if '"' in pair[1]:
+				pair[1] = re.findall('"([^"]*)"', pair[1])
+			# and also do the same for single-command strings, for consistency
+			else:
+				pair[1] = [pair[1]]
+			keybinding_command_pairs.append(pair)
+
+		# sort command lists into a dictionary with their keybindings as keys
+		keybindings = {}
+		# prepare an empty array for each keybinding
+		for pair in keybinding_command_pairs:
+			keybindings[pair[0]] = []
+		# populate the arrays with commands
+		for pair in keybinding_command_pairs:
+			# Add the necessary view with an @ symbol
+			if len(pair) == 3:
+				pair[1].insert(0, "@" + pair[2])
+			# using append instead of = is important here to avoid just eating duplicates
+			keybindings[pair[0]].append(pair[1])
+
+	return keybindings
+
+
+"""
+generate a tmux config
+"""
+def generate_tmux_config(keybindings: dict, output_location: str):
+	with open(output_location, "w") as file:
+		file.write(CONFIG_HEADER)
+
+		# Movement fixes section
+		file.write("# Keybindings for fixed numpad and arrowkey movement \n")
+		# normal movement
+		for key in CONTROL_FIXES:
+			file.write("bind-key -T root " + key + " run-shell '" + \
+				DWARFMUX_LOCATION + " -M " + CONTROL_FIXES[key] + "'\n" )
+			file.write("bind-key -T DFHACK " + key + " run-shell '" + \
+				DWARFMUX_LOCATION + " -M " + CONTROL_FIXES[key] + "'\n" )
+		# shift movement
+		for key in CONTROL_FIXES:
+			file.write("bind-key -T root S-" + key + " run-shell '" + \
+				DWARFMUX_LOCATION + " -M " + CONTROL_FIXES[key] + " -f'\n" )
+			file.write("bind-key -T DFHACK S-" + key + " run-shell '" + \
+				DWARFMUX_LOCATION + " -M " + CONTROL_FIXES[key] + " -f'\n" )
+		# alt movement
+		for key in CONTROL_FIXES:
+			file.write("bind-key -T root M-" + key + " run-shell '" + \
+				DWARFMUX_LOCATION + " -M " + CONTROL_FIXES[key] + " -c'\n" )
+			file.write("bind-key -T DFHACK M-" + key + " run-shell '" + \
+				DWARFMUX_LOCATION + " -M " + CONTROL_FIXES[key] + " -c'\n" )
+		file.write("\n")
+
+		# DFHack section
+		file.write("# Keybindings copied from DFHack \n")
+		# loop through all keybindings
+		for binding in keybindings:
+
+			# Do NOT use C-M or C-S-M, as it will just eat the enter key in tmux
+			# This keybinding is just off limits forever I guess
+			if binding == "C-m" or binding == "C-S-m":
+				continue
+
+			# Split the keybindings into DFHACK and DFHACK_SHIFT
+			table = "DFHACK"
+			newbinding = binding
+			if "S-" in binding and "C-" in binding:
+				table = "DFHACK_SHIFT"	
+				newbinding = binding.replace("S-","")
+
+			file.write("bind-key -T " + table + " " + newbinding + " {\n")
+			# Loop through each group of commands to list them
+			for command_group in keybindings[binding]:
+				file.write("run-shell '" + DWARFMUX_LOCATION + " -D ")
+				for command in command_group:
+					file.write('"' + command + '" ')
+				file.write("'\n")
+			file.write("}\n")
+
+		# HJKL section
+		file.write("# Keybindings for HJKL mode \n")
+		table = "HJKL_MODE"
+		if "hjkl-in-dfhack-mode" in options:
+			table = "DFHACK"
+		else:
+			file.write(CONFIG_HJKL)
+		# normal movement
+		for key in HJKL_CONTROLS:
+			file.write("bind-key -T " + table + " " + key + " run-shell '" + \
+				DWARFMUX_LOCATION + " -M " + HJKL_CONTROLS[key] + "'\n" \
+			)
+		# shift movement
+		for key in HJKL_CONTROLS:
+			file.write("bind-key -T " + table + " " + key.upper() + " run-shell '" + \
+				DWARFMUX_LOCATION + " -M " + HJKL_CONTROLS[key] + " -f'\n" \
+			)
+		# alt movement
+		for key in HJKL_CONTROLS:
+			file.write("bind-key -T " + table + " M-" + key + " run-shell '" + \
+				DWARFMUX_LOCATION + " -M " + HJKL_CONTROLS[key] + " -c'\n" \
+			)
+		file.write("\n")
+
+
+
+# ACTIVATE THE MACHINE
+def init():
+	run(["tmux", "-f", DEFAULT_CONFIG_LOCATION, "new-session", "-s", "Dwarfmux", "dfhack"])
+
+
+def main():
+	# get all relevant arguments
+	flags = get_flags()
+
+	# pass these secondary functions along
+	if not flags.command_queue == None:
+		dfhack_run(flags.command_queue)
+		return
+	if not flags.input_queue == None:
+		simulate_input(flags.input_queue, flags.input_simultaneous)
+		return
+	if not flags.move_direction == None:
+		move(flags.move_direction, flags.move_fast, flags.move_careful)
+		return
+	if flags.get_focus_string:
+		print(get_focus_string())
+		return
+	if not flags.options == None:
+		for option in flags.options:
+			options.append(option)
+
+	# prepare the keybindings
+	keybindings = get_keybindings(os.getenv("HOME") + "/.dwarffortress/dfhack.init")
+	generate_tmux_config(keybindings, DEFAULT_CONFIG_LOCATION)
+
+	init()
+
+
+main()
