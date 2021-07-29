@@ -54,7 +54,7 @@ set -sg escape-time 0
 set -g status-right "#{s/root//:client_key_table}"
 set -g status-left "Dwarfmux"
 set -g status-justify absolute-centre
-set -g repeat-time 50
+set -g repeat-time 5
 
 # DFHack mode
 bind-key -n M-d {
@@ -102,12 +102,28 @@ bind-key -T HJKL_MODE M-d {
 
 MOVEMENT_MODES = ["dwarfmode", "dungeonmode"]
 MOVEMENT_DIRECTIONS = {
-	"north": ["UP",     "N"],
-	"south": ["DOWN",   "S"],
-	"east":  ["RIGHT",  "E"],
-	"west":  ["LEFT",   "W"],
+	"north":     ["UP",          "N"],
+	"south":     ["DOWN",        "S"],
+	"east":      ["RIGHT",       "E"],
+	"west":      ["LEFT",        "W"],
+	"northeast": ["UPRIGHT",     "NE"],
+	"northwest": ["UPLEFT",      "NW"],
+	"southeast": ["DOWNRIGHT",   "SE"],
+	"southwest": ["DOWNLEFT",    "SW"],
 	"up":    ["UP_Z",   "UP"],
 	"down":  ["DOWN_Z", "DOWN"]
+}
+MOVEMENT_DIRECTIONS_TMUX = {
+	"north":     "8",
+	"south":     "2",
+	"east":      "6",
+	"west":      "4",
+	"northeast": "9",
+	"northwest": "7",
+	"southeast": "3",
+	"southwest": "1",
+	"up":        "<",
+	"down":      ">"
 }
 
 HJKL_CONTROLS = {
@@ -232,41 +248,35 @@ def move(move_direction: str, fast=False, careful=False):
 	input_string = ""
 	move_direction = move_direction[0]
 	focus_string = get_focus_string()
+	mode = ""
+
+	if "dwarfmode" in focus_string or "new_region" in focus_string:
+		mode = "dwarfmode"
+	elif "dungeonmode" in focus_string:
+		mode = "dungeonmode"
 
 	if fast:
 		# Movements for dwarf mode
 		if "dwarfmode" in focus_string:
 			input_string = "CURSOR_" + MOVEMENT_DIRECTIONS[move_direction][0] + "_FAST"
 			simulate_input([input_string])
-			return
 		# Movements for other modes
 		else:
 			input_string = "CURSOR_" + MOVEMENT_DIRECTIONS[move_direction][0] + "_FAST"
 			simulate_input([input_string])
-			return
 
-	for direction in MOVEMENT_DIRECTIONS:
-		if direction in move_direction:
-			# Movements for adventure mode
-			if "dungeonmode" in focus_string:
-				input_string = input_string + MOVEMENT_DIRECTIONS[direction][1]
-				if careful:
-					input_string = "A_CARE_MOVE_" + input_string
-				else:
-					input_string = "A_MOVE_" + input_string
-			# Movements for dwarf mode
-			elif "dwarfmode" in focus_string:
-				print("TEST")
-				input_string = input_string + MOVEMENT_DIRECTIONS[direction][0]
-				input_string = "CURSOR_" + input_string
-			# Movements for other modes
-			else:
-				input_string = "STANDARDSCROLL_" + MOVEMENT_DIRECTIONS[direction][0]
-				# Extra input because menus are inconsistent
-				simulate_input([input_string])
-				input_string = "CURSOR_" + MOVEMENT_DIRECTIONS[direction][0]
+	if careful:
+		# Movements for dwarf mode
+		if "dwarfmode" in focus_string:
+			input_string = "A_MOVE_" + MOVEMENT_DIRECTIONS[move_direction][0] + "_FAST"
+			simulate_input([input_string])
+		# Movements for other modes
+		else:
+			input_string = "A_MOVE_" + MOVEMENT_DIRECTIONS[move_direction][0] + "_FAST"
+			simulate_input([input_string])
 
-	simulate_input([input_string])
+	else:
+		run(["tmux", "send-keys", MOVEMENT_DIRECTIONS_TMUX[move_direction]])
 
 
 """
