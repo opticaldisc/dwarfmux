@@ -54,6 +54,7 @@ set -sg escape-time 0
 set -g status-right "#{s/root//:client_key_table}"
 set -g status-left "Dwarfmux"
 set -g status-justify absolute-centre
+set -g repeat-time 50
 
 # DFHack mode
 bind-key -n M-d {
@@ -230,30 +231,40 @@ def simulate_input(actions: list, simultaneous=False):
 def move(move_direction: str, fast=False, careful=False):
 	input_string = ""
 	move_direction = move_direction[0]
-	# Check to see which mode we're in
-	for mode in range(0, len(MOVEMENT_MODES)):
-		# check to see if the current mode is active, otherwise move on
-		if MOVEMENT_MODES[mode] in get_focus_string():
-			for direction in MOVEMENT_DIRECTIONS:
-				if direction in move_direction:
-					input_string = input_string + MOVEMENT_DIRECTIONS[direction][mode]
+	focus_string = get_focus_string()
 
-			# Movements for dwarf mode
-			if MOVEMENT_MODES[mode] == "dwarfmode":
-				input_string = "CURSOR_" + input_string
-				if fast:
-					input_string = input_string + "_FAST"
+	if fast:
+		# Movements for dwarf mode
+		if "dwarfmode" in focus_string:
+			input_string = "CURSOR_" + MOVEMENT_DIRECTIONS[move_direction][0] + "_FAST"
+			simulate_input([input_string])
+			return
+		# Movements for other modes
+		else:
+			input_string = "CURSOR_" + MOVEMENT_DIRECTIONS[move_direction][0] + "_FAST"
+			simulate_input([input_string])
+			return
+
+	for direction in MOVEMENT_DIRECTIONS:
+		if direction in move_direction:
 			# Movements for adventure mode
-			elif MOVEMENT_MODES[mode] == "dungeonmode":
+			if "dungeonmode" in focus_string:
+				input_string = input_string + MOVEMENT_DIRECTIONS[direction][1]
 				if careful:
 					input_string = "A_CARE_MOVE_" + input_string
 				else:
 					input_string = "A_MOVE_" + input_string
-	# If we're not in any mode, do menu movements
-	if input_string == "":
-		for direction in MOVEMENT_DIRECTIONS:
-			if direction in move_direction:
+			# Movements for dwarf mode
+			elif "dwarfmode" in focus_string:
+				print("TEST")
+				input_string = input_string + MOVEMENT_DIRECTIONS[direction][0]
+				input_string = "CURSOR_" + input_string
+			# Movements for other modes
+			else:
 				input_string = "STANDARDSCROLL_" + MOVEMENT_DIRECTIONS[direction][0]
+				# Extra input because menus are inconsistent
+				simulate_input([input_string])
+				input_string = "CURSOR_" + MOVEMENT_DIRECTIONS[direction][0]
 
 	simulate_input([input_string])
 
@@ -337,11 +348,11 @@ def generate_tmux_config(keybindings: dict, output_location: str):
 		# Movement fixes section
 		file.write("# Keybindings for fixed numpad and arrowkey movement \n")
 		# normal movement
-		for key in CONTROL_FIXES:
-			file.write("bind-key -T root " + key + " run-shell '" + \
-				DWARFMUX_LOCATION + " -M " + CONTROL_FIXES[key] + "'\n" )
-			file.write("bind-key -T DFHACK " + key + " run-shell '" + \
-				DWARFMUX_LOCATION + " -M " + CONTROL_FIXES[key] + "'\n" )
+		#for key in CONTROL_FIXES:
+		#	file.write("bind-key -T root " + key + " run-shell '" + \
+		#		DWARFMUX_LOCATION + " -M " + CONTROL_FIXES[key] + "'\n" )
+		#	file.write("bind-key -T DFHACK " + key + " run-shell '" + \
+		#		DWARFMUX_LOCATION + " -M " + CONTROL_FIXES[key] + "'\n" )
 		# shift movement
 		for key in CONTROL_FIXES:
 			file.write("bind-key -T root S-" + key + " run-shell '" + \
