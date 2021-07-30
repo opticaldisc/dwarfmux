@@ -410,14 +410,21 @@ def generate_tmux_config(keybindings: dict, output_location: str):
 			table = "DFHACK"
 		else:
 			file.write(CONFIG_HJKL)
+
 		# normal movement
 		for key in HJKL_CONTROLS:
-			file.write("bind-key -T " + table + " " + key + " run-shell '" + \
-				DWARFMUX_LOCATION + " -M " + HJKL_CONTROLS[key] + "'\n" \
+			file.write("bind-key -T " + table + " " + key + \
+				" send-keys " + MOVEMENT_DIRECTIONS_TMUX[HJKL_CONTROLS[key]] + "\n" \
 			)
+		# + and - menu movement (shift for / and *)
+		file.write("bind-key -T " + table + " _ send-keys / \n")
+		file.write("bind-key -T " + table + " + send-keys * \n")
+		file.write("bind-key -T " + table + " - send-keys - \n")
+		file.write("bind-key -T " + table + " = send-keys + \n")
 		# shift movement
 		for key in HJKL_CONTROLS:
 			file.write("bind-key -T " + table + " " + key.upper() + " run-shell '" + \
+
 				DWARFMUX_LOCATION + " -M " + HJKL_CONTROLS[key] + " -f'\n" \
 			)
 		# alt movement
@@ -425,8 +432,10 @@ def generate_tmux_config(keybindings: dict, output_location: str):
 			file.write("bind-key -T " + table + " M-" + key + " run-shell '" + \
 				DWARFMUX_LOCATION + " -M " + HJKL_CONTROLS[key] + " -c'\n" \
 			)
+		# ctrl movement (normal inputs)
+		for key in HJKL_CONTROLS:
+			file.write("bind-key -T " + table + " C-" + key + " send-keys -t 0 " + key + "\n")
 		file.write("\n")
-
 
 
 # ACTIVATE THE MACHINE
