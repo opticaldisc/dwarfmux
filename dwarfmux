@@ -34,7 +34,7 @@ HELP = """
   Built-in keybindings:
  ╔═══════════════════════════════════════════════════╗
  ║ ( M-Escape ):     Exit any current mode.          ║
- ║ ( C-` ):          Toggle HJKL movement mode.      ║
+ ║ ( ` ):            Toggle HJKL movement mode.      ║
  ║ ( M-` ):          Enter DFHack mode.              ║
  ║ ( M-` )(twice):   Enter DFHack + Shift mode.      ║
  ║ ( M-` )(thrice):  Open the DFHack command prompt. ║
