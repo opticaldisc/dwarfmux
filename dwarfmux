@@ -24,13 +24,13 @@ HELP = """
  
  Press Q to continue
  
-  Modifiers:         Menu Controls:
- ╔════════════════╗ ╔══════════════════════╗
- ║ ( M- ):  Alt   ║ ║ ( - ):  Insert - key ║
- ║ ( C- ):  Ctrl  ║ ║ ( = ):  Insert + key ║
- ║ ( S- ):  Shift ║ ║ ( _ ):  Insert / key ║
- ╚════════════════╝ ║ ( + ):  Insert * key ║
-                    ╚══════════════════════╝
+  Modifiers:              Menu Controls:
+ ╔═════════════════════╗ ╔══════════════════════╗
+ ║ ( M- ):  Alt (Meta) ║ ║ ( - ):  Insert - key ║
+ ║ ( C- ):  Control    ║ ║ ( = ):  Insert + key ║
+ ║ ( S- ):  Shift      ║ ║ ( _ ):  Insert / key ║
+ ╚═════════════════════╝ ║ ( + ):  Insert * key ║
+                         ╚══════════════════════╝
   Built-in keybindings:
  ╔═══════════════════════════════════════════════════╗
  ║ ( M-Escape ):     Exit any current mode.          ║
