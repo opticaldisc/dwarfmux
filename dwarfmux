@@ -8,6 +8,7 @@ import re
 import argparse
 
 LOGO = """
+ 
  *8888a.                        .d88b                     
   88 `98;                       88'                  y k u 
   88  '8b d8    d8 .d8bv8 8vd8b 888P 8vd8vdb, dP  d8  \ /  
@@ -15,10 +16,27 @@ LOGO = """
   88 .d8' 88d88b8P 8b .88 88    88   88 8P 88 88 .88  / \  
  *888P"   `8P'`8P' `88P^8 8P   d8"   8P    8P `88P^8 b j n 
                                                        
-      ╔═════════════════════════════════════════════╗
-      ║ A Dwarf Fortress + DFHack terminal wrapper  ║
-      ║             by Optical Disc 💿              ║
-      ╚═════════════════════════════════════════════╝
+ A Dwarf Fortress + DFHack terminal wrapper
+ by Optical Disc 💿
+ 
+ Press Q to continue
+ 
+  Menu Controls:
+ ╔══════════════════════════════╗
+ ║ ( - ):          Insert - key ║
+ ║ ( = ):          Insert + key ║
+ ║ ( Shift + - ):  Insert / key ║
+ ║ ( Shift + = ):  Insert * key ║
+ ╚══════════════════════════════╝
+  Built-in keybindings:
+ ╔═══════════════════════════════════════════════════════╗
+ ║ ( Alt + Esc ):        Exit any current mode.          ║
+ ║ ( Alt + ` ):          Enter DFHack mode.              ║
+ ║ ( Alt + ` )(twice):   Enter DFHack + Shift mode.      ║
+ ║ ( Alt + ` )(thrice):  Open the DFHack command prompt. ║
+ ║ ( Alt + H ):          Enter HJKL movement mode.       ║
+ ║ ( Alt + ? ):          Display this help message.      ║
+ ╚═══════════════════════════════════════════════════════╝
 """
 
 # modifier keys
@@ -57,12 +75,12 @@ set -g status-justify absolute-centre
 set -g repeat-time 5
 
 # DFHack mode
-bind-key -n M-d {
+bind-key -n M-` {
 	set-option key-table DFHACK
 	set-option status-bg colour3
 }
 # DFHack mode with shift key
-bind-key -T DFHACK M-d {
+bind-key -T DFHACK M-` {
 	set-option key-table DFHACK_SHIFT
 	set-option status-bg colour11
 }
@@ -202,6 +220,11 @@ def get_flags():
 		action="extend", \
 		dest="options", \
 		help="List some options for just this instance of Dwarfmux.")
+
+	parser.add_argument('-L', '--logo', \
+		action="store_true", \
+		dest="logo", \
+		help="Just print the logo to stdout.")
 
 	return parser.parse_args()
 
@@ -354,6 +377,21 @@ generate a tmux config
 def generate_tmux_config(keybindings: dict, output_location: str):
 	with open(output_location, "w") as file:
 		file.write(CONFIG_HEADER)
+		# Built-in DFHack commad prompt key
+		file.write("bind-key -T DFHACK_SHIFT M-` run-shell '" + \
+			DWARFMUX_LOCATION + " -D command-prompt'\n")
+		# Built-in Dwarfmux help
+		file.write("bind-key -T root M-? run-shell '" + \
+			DWARFMUX_LOCATION + " -L'\n")
+		# + and - menu movement (shift for / and *)
+		file.write("bind-key -n  _ send-keys / \n")
+		file.write("bind-key -n  + send-keys * \n")
+		file.write("bind-key -n  - send-keys - \n")
+		file.write("bind-key -n  = send-keys + \n")
+
+		# remove the common tmux bindings
+		if not "tmux-bindings" in options:
+			file.write("set -g prefix None \n" + "unbind-key -a \n\n")
 
 		# Movement fixes section
 		file.write("# Keybindings for fixed numpad and arrowkey movement \n")
@@ -411,16 +449,17 @@ def generate_tmux_config(keybindings: dict, output_location: str):
 		else:
 			file.write(CONFIG_HJKL)
 
-		# normal movement
-		for key in HJKL_CONTROLS:
-			file.write("bind-key -T " + table + " " + key + \
-				" send-keys " + MOVEMENT_DIRECTIONS_TMUX[HJKL_CONTROLS[key]] + "\n" \
-			)
 		# + and - menu movement (shift for / and *)
 		file.write("bind-key -T " + table + " _ send-keys / \n")
 		file.write("bind-key -T " + table + " + send-keys * \n")
 		file.write("bind-key -T " + table + " - send-keys - \n")
 		file.write("bind-key -T " + table + " = send-keys + \n")
+
+		# normal movement
+		for key in HJKL_CONTROLS:
+			file.write("bind-key -T " + table + " " + key + \
+				" send-keys " + MOVEMENT_DIRECTIONS_TMUX[HJKL_CONTROLS[key]] + "\n" \
+			)
 		# shift movement
 		for key in HJKL_CONTROLS:
 			file.write("bind-key -T " + table + " " + key.upper() + " run-shell '" + \
@@ -440,7 +479,12 @@ def generate_tmux_config(keybindings: dict, output_location: str):
 
 # ACTIVATE THE MACHINE
 def init():
-	run(["tmux", "-f", DEFAULT_CONFIG_LOCATION, "new-session", "-s", "Dwarfmux", "dfhack"])
+	run(["tmux", "-f", DEFAULT_CONFIG_LOCATION, "new-session", "-d", "-s", "Dwarfmux", "./dfhack"])
+	run(["tmux", "attach", ";", \
+		"display-message", "-p",\
+		LOGO])
+#		"run-shell", \
+#		DWARFMUX_LOCATION + " -L"])
 
 
 def main():
@@ -459,6 +503,9 @@ def main():
 		return
 	if flags.get_focus_string:
 		print(get_focus_string())
+		return
+	if flags.logo:
+		print(LOGO)
 		return
 	if not flags.options == None:
 		for option in flags.options:
