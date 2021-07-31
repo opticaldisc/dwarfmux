@@ -24,14 +24,13 @@ HELP = """
  
  Press Q to continue
  
-  Menu Controls:
- ╔══════════════════════╗
- ║ ( - ):  Insert - key ║
- ║ ( = ):  Insert + key ║
- ║ ( _ ):  Insert / key ║
- ║ ( + ):  Insert * key ║
- ╚══════════════════════╝
- 
+  Modifiers:         Menu Controls:
+ ╔════════════════╗ ╔══════════════════════╗
+ ║ ( M- ):  Alt   ║ ║ ( - ):  Insert - key ║
+ ║ ( C- ):  Ctrl  ║ ║ ( = ):  Insert + key ║
+ ║ ( S- ):  Shift ║ ║ ( _ ):  Insert / key ║
+ ╚════════════════╝ ║ ( + ):  Insert * key ║
+                    ╚══════════════════════╝
   Built-in keybindings:
  ╔═══════════════════════════════════════════════════╗
  ║ ( M-Escape ):     Exit any current mode.          ║
@@ -527,7 +526,7 @@ def main():
 		print(" ")
 		for binding in keybindings:
 			for function in keybindings[binding]:
-				print(binding + ": " + str(function))
+				print(binding + ": " + str(function).replace("]","").replace("[",""))
 		return
 	if not flags.options == None:
 		for option in flags.options:
