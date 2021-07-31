@@ -109,6 +109,10 @@ bind-key -T DFHACK ` {
 	set-option key-table HJKL_MODE
 	set-option status-bg colour12
 }
+bind-key -T DFHACK_SHIFT ` {
+	set-option key-table HJKL_MODE
+	set-option status-bg colour12
+}
 # Exit HJKL mode
 bind-key -T HJKL_MODE M-Escape {
 	set-option key-table root
