@@ -35,10 +35,10 @@ HELP = """
   Built-in keybindings:
  ╔═══════════════════════════════════════════════════╗
  ║ ( M-Escape ):     Exit any current mode.          ║
+ ║ ( C-` ):          Toggle HJKL movement mode.      ║
  ║ ( M-` ):          Enter DFHack mode.              ║
  ║ ( M-` )(twice):   Enter DFHack + Shift mode.      ║
  ║ ( M-` )(thrice):  Open the DFHack command prompt. ║
- ║ ( M-h ):          Enter HJKL movement mode.       ║
  ║ ( M-? ):          Display this help message.      ║
  ╚═══════════════════════════════════════════════════╝
 """
@@ -102,16 +102,20 @@ bind-key -T DFHACK_SHIFT M-Escape {
 """
 
 CONFIG_HJKL = """# HJKL movement mode
-bind-key -n M-h {
+bind-key -n ` {
 	set-option key-table HJKL_MODE
 	set-option status-bg colour12
 }
-bind-key -T DFHACK M-h {
+bind-key -T DFHACK ` {
 	set-option key-table HJKL_MODE
 	set-option status-bg colour12
 }
 # Exit HJKL mode
 bind-key -T HJKL_MODE M-Escape {
+	set-option key-table root
+	set-option status-bg colour2
+}
+bind-key -T HJKL_MODE ` {
 	set-option key-table root
 	set-option status-bg colour2
 }
