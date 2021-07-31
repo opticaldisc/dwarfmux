@@ -496,9 +496,10 @@ def generate_tmux_config(keybindings: dict, output_location: str):
 # ACTIVATE THE MACHINE
 def init():
 	run(["tmux", "-f", DEFAULT_CONFIG_LOCATION, "new-session", "-d", "-s", "Dwarfmux", "./dfhack"])
-	run(["tmux", "attach", ";", \
-		"run-shell", \
-		DWARFMUX_LOCATION + " -L"])
+#	run(["tmux", "attach", ";", \
+#		"run-shell", \
+#		DWARFMUX_LOCATION + " -L"])
+	run(["tmux", "attach"])
 
 
 def main():
