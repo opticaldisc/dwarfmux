@@ -18,25 +18,29 @@ LOGO = """
                                                        
  A Dwarf Fortress + DFHack terminal wrapper
  by Optical Disc 💿
+"""
+
+HELP = """
  
  Press Q to continue
  
   Menu Controls:
- ╔══════════════════════════════╗
- ║ ( - ):          Insert - key ║
- ║ ( = ):          Insert + key ║
- ║ ( Shift + - ):  Insert / key ║
- ║ ( Shift + = ):  Insert * key ║
- ╚══════════════════════════════╝
+ ╔══════════════════════╗
+ ║ ( - ):  Insert - key ║
+ ║ ( = ):  Insert + key ║
+ ║ ( _ ):  Insert / key ║
+ ║ ( + ):  Insert * key ║
+ ╚══════════════════════╝
+ 
   Built-in keybindings:
- ╔═══════════════════════════════════════════════════════╗
- ║ ( Alt + Esc ):        Exit any current mode.          ║
- ║ ( Alt + ` ):          Enter DFHack mode.              ║
- ║ ( Alt + ` )(twice):   Enter DFHack + Shift mode.      ║
- ║ ( Alt + ` )(thrice):  Open the DFHack command prompt. ║
- ║ ( Alt + H ):          Enter HJKL movement mode.       ║
- ║ ( Alt + ? ):          Display this help message.      ║
- ╚═══════════════════════════════════════════════════════╝
+ ╔═══════════════════════════════════════════════════╗
+ ║ ( M-Escape ):     Exit any current mode.          ║
+ ║ ( M-` ):          Enter DFHack mode.              ║
+ ║ ( M-` )(twice):   Enter DFHack + Shift mode.      ║
+ ║ ( M-` )(thrice):  Open the DFHack command prompt. ║
+ ║ ( M-h ):          Enter HJKL movement mode.       ║
+ ║ ( M-? ):          Display this help message.      ║
+ ╚═══════════════════════════════════════════════════╝
 """
 
 # modifier keys
@@ -226,6 +230,11 @@ def get_flags():
 		dest="logo", \
 		help="Just print the logo to stdout.")
 
+	parser.add_argument('-H', '--long-help', \
+		action="store_true", \
+		dest="longhelp", \
+		help="Print the long help message as shown in Dwarfmux.")
+
 	return parser.parse_args()
 
 
@@ -382,7 +391,7 @@ def generate_tmux_config(keybindings: dict, output_location: str):
 			DWARFMUX_LOCATION + " -D command-prompt'\n")
 		# Built-in Dwarfmux help
 		file.write("bind-key -T root M-? run-shell '" + \
-			DWARFMUX_LOCATION + " -L'\n")
+			DWARFMUX_LOCATION + " -H'\n")
 		# + and - menu movement (shift for / and *)
 		file.write("bind-key -n  _ send-keys / \n")
 		file.write("bind-key -n  + send-keys * \n")
@@ -481,15 +490,15 @@ def generate_tmux_config(keybindings: dict, output_location: str):
 def init():
 	run(["tmux", "-f", DEFAULT_CONFIG_LOCATION, "new-session", "-d", "-s", "Dwarfmux", "./dfhack"])
 	run(["tmux", "attach", ";", \
-		"display-message", "-p",\
-		LOGO])
-#		"run-shell", \
-#		DWARFMUX_LOCATION + " -L"])
+		"run-shell", \
+		DWARFMUX_LOCATION + " -L"])
 
 
 def main():
 	# get all relevant arguments
 	flags = get_flags()
+	# prepare the keybindings
+	keybindings = get_keybindings(os.getenv("HOME") + "/.dwarffortress/dfhack.init")
 
 	# pass these secondary functions along
 	if not flags.command_queue == None:
@@ -507,12 +516,19 @@ def main():
 	if flags.logo:
 		print(LOGO)
 		return
+	if flags.longhelp:
+		print(LOGO + HELP)
+		print(" ")
+		print(" DFHack keybindings:")
+		print(" ")
+		for binding in keybindings:
+			for function in keybindings[binding]:
+				print(binding + ": " + str(function))
+		return
 	if not flags.options == None:
 		for option in flags.options:
 			options.append(option)
 
-	# prepare the keybindings
-	keybindings = get_keybindings(os.getenv("HOME") + "/.dwarffortress/dfhack.init")
 	generate_tmux_config(keybindings, DEFAULT_CONFIG_LOCATION)
 
 	init()
