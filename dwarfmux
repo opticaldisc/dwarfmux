@@ -26,20 +26,20 @@ HELP = """
  
   Modifiers:              Menu Controls:
  ╔═════════════════════╗ ╔══════════════════════╗
- ║ ( M- ):  Alt (Meta) ║ ║ ( - ):  Insert - key ║
- ║ ( C- ):  Control    ║ ║ ( = ):  Insert + key ║
- ║ ( S- ):  Shift      ║ ║ ( _ ):  Insert / key ║
- ╚═════════════════════╝ ║ ( + ):  Insert * key ║
+ ║ [ M- ]:  Alt (Meta) ║ ║ [ - ]:  Insert - key ║
+ ║ [ C- ]:  Control    ║ ║ [ = ]:  Insert + key ║
+ ║ [ S- ]:  Shift      ║ ║ [ _ ]:  Insert / key ║
+ ╚═════════════════════╝ ║ [ + ]:  Insert * key ║
                          ╚══════════════════════╝
   Built-in keybindings:
- ╔═══════════════════════════════════════════════════╗
- ║ ( M-Escape ):     Exit any current mode.          ║
- ║ ( ` ):            Toggle HJKL movement mode.      ║
- ║ ( M-` ):          Enter DFHack mode.              ║
- ║ ( M-` )(twice):   Enter DFHack + Shift mode.      ║
- ║ ( M-` )(thrice):  Open the DFHack command prompt. ║
- ║ ( M-? ):          Display this help message.      ║
- ╚═══════════════════════════════════════════════════╝
+ ╔══════════════════════════════════════════════════╗
+ ║ [ M-Escape ]:    Exit any current mode.          ║
+ ║ [ ` ]:           Toggle HJKL movement mode.      ║
+ ║ [ M-` ]:         Enter DFHack mode.              ║
+ ║ [ M-` twice ]:   Enter DFHack + Shift mode.      ║
+ ║ [ M-` thrice ]:  Open the DFHack command prompt. ║
+ ║ [ M-S-? ]:       Display this help message.      ║
+ ╚══════════════════════════════════════════════════╝
 """
 
 # modifier keys
@@ -122,7 +122,8 @@ bind-key -T HJKL_MODE ` {
 	set-option key-table root
 	set-option status-bg colour2
 }
-bind-key -T HJKL_MODE M-d {
+# Access DFHACK from HJKL_MODE
+bind-key -T HJKL_MODE M-` {
 	set-option key-table DFHACK
 	set-option status-bg colour3
 }
@@ -219,7 +220,7 @@ def get_flags():
 	parser.add_argument('-f', '--fast', \
 		action="store_true", \
 		dest="move_fast", \
-		help="Makes inputs given via -M move further in Fortress mode.")
+		help="Makes inputs given via -M use fast cursor movement.")
 
 	parser.add_argument('-c', '--careful', \
 		action="store_true", \
@@ -304,7 +305,7 @@ def move(move_direction: str, fast=False, careful=False):
 			input_string = "CURSOR_" + MOVEMENT_DIRECTIONS[move_direction][0] + "_FAST"
 			simulate_input([input_string])
 
-	if careful:
+	elif careful:
 		# Movements for dwarf mode
 		if "dwarfmode" in focus_string:
 			input_string = "A_MOVE_" + MOVEMENT_DIRECTIONS[move_direction][0] + "_FAST"
@@ -527,11 +528,12 @@ def main():
 	if flags.longhelp:
 		print(LOGO + HELP)
 		print(" ")
-		print(" DFHack keybindings:")
+		print("  DFHack keybindings (press / to search):")
 		print(" ")
 		for binding in keybindings:
 			for function in keybindings[binding]:
-				print(binding + ": " + str(function).replace("]","").replace("[",""))
+				print(binding + ": " + str(function).replace("]","").replace("[","").replace("'",'"'))
+				print(" ")
 		return
 	if not flags.options == None:
 		for option in flags.options:
