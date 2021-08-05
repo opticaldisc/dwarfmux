@@ -43,6 +43,7 @@ HELP = """
  ║ [ M-` twice ]:   Enter DFHack + Shift mode.      ║
  ║ [ M-` thrice ]:  Open the DFHack command prompt. ║
  ║ [ M-S-? ]:       Display this help message.      ║
+ ║ [ C-M-D ]:       Detach from Tmux                ║
  ╚══════════════════════════════════════════════════╝
   HJKL Mode Movement + Menu Controls: 
  ╔══════════════════════════╗
@@ -88,6 +89,8 @@ set -g status-right "#{s/root//:client_key_table}"
 set -g status-left "Dwarfmux"
 set -g status-justify absolute-centre
 set -g repeat-time 5
+
+bind-key -n C-M-D detach
 
 # DFHack mode
 bind-key -n M-` {

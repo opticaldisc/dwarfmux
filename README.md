@@ -3,7 +3,7 @@
 
 Dwarfmux is a terminal wrapper for Dwarf Fortress and DFHack that uses Python and Tmux to allow you to use DFHack's keybindings in the game's ncurses terminal mode.
 
-I made this plugin because I was unsatisfied with all the shortcomings of `PRINT_MODE:TEXT` support in DFHack. (and Dwarf Fortress in general...) 
+I made this script because I was unsatisfied with all the shortcomings of `PRINT_MODE:TEXT` support in DFHack. (and Dwarf Fortress in general...) 
 Without this utility, DFHack users who want to play in a real terminal have to just name FN hotkeys after DFHack commands to access any of DFHack's special features. 
 On top of that, I was also frustrated with the lack of simple ways to use HJKL keys for movement, like in many traditional roguelike games.
 
