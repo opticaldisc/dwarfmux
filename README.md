@@ -1,5 +1,5 @@
 
-# Dwarfmux
+![Dwarfmux](/pics/logo.png?raw=true "Dwarfmux")
 
 Dwarfmux is a terminal wrapper for Dwarf Fortress and DFHack that uses Python and Tmux to allow you to use DFHack's keybindings in the game's ncurses terminal mode.
 
@@ -29,33 +29,21 @@ There are limitations to what Tmux can do in terms of actual keyboard input, but
 ## Controls
 
 This help screen can be brought up in-game by pressing Alt + Shift + ? in normal mode.
-```
-  Modifiers:
- ╔═════════════════════╗
- ║ [ M- ]:  Alt (Meta) ║
- ║ [ C- ]:  Control    ║
- ║ [ S- ]:  Shift      ║
- ╚═════════════════════╝
-  Built-in keybindings:
- ╔══════════════════════════════════════════════════╗
- ║ [ M-Escape ]:    Exit any current mode.          ║
- ║ [ ` ]:           Toggle HJKL movement mode.      ║
- ║ [ M-` ]:         Enter DFHack mode.              ║
- ║ [ M-` twice ]:   Enter DFHack + Shift mode.      ║
- ║ [ M-` thrice ]:  Open the DFHack command prompt. ║
- ║ [ M-S-? ]:       Display this help message.      ║
- ╚══════════════════════════════════════════════════╝
-  HJKL Mode Movement + Menu Controls:
- ╔══════════════════════════╗
- ║ [ M-(direction) ]: y k u ║╔══════════════════════╗
- ║ Careful movement.   \|/  ║║ [ - ]:  Insert - key ║
- ║ [ C-(direction) ]: h-X-l ║║ [ = ]:  Insert + key ║
- ║ Pass input to       /|\  ║║ [ _ ]:  Insert / key ║
- ║ Dwarf Fortress.    b j n ║║ [ + ]:  Insert * key ║
- ╚══════════════════════════╝╚══════════════════════╝
-```
+
+![Help Screen](/pics/help_screen.png?raw=true)
+
 Any inputs blocked by movement keys in HJKL mode can be reached by holding Ctrl.
 For example, the units screen in Fortress mode would normally be accessed by pressing U, so in HJKL mode you would press Ctrl+U.
+
+Also, each of the modes has a slightly different look.
+
+![Normal Mode](/pics/normal_mode.png?raw=true)
+
+![DFHACK Mode](/pics/dfhack_mode.png?raw=true)
+
+![DFHACK+SHIFT Mode](/pics/dfhack_shift_mode.png?raw=true)
+
+![HJKL Mode](/pics/hjkl_mode.png?raw=true)
 
 ## Options
 
